@@ -26,6 +26,10 @@ jobs:
         with:
           version: "latest"
           java-version: "24"
+      - name: Setup MSVC
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: Build the Native binary
         run: ./gradlew nativeCompile
 
