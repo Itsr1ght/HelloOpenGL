@@ -68,7 +68,15 @@ graalvmNative {
         main {
             imageName = "HelloOpenGL"
 
-            buildArgs.add("-H:IncludeResources=.*\\.so")
+            if (os.isLinux()){
+                buildArgs.add("-H:IncludeResources=.*\\.so")
+            }
+            if (os.isWindows()){
+                buildArgs.add("-H:IncludeResources=.*\\.dll")
+            }
+            if (os.isMacOsX()){
+                buildArgs.add("-H:IncludeResources=.*\\.dylib")
+            }
             buildArgs.add("--enable-native-access=ALL-UNNAMED")
             buildArgs.add("--no-fallback")
         }
