@@ -8,10 +8,10 @@ on:
         required: true
         type: choice
         options:
-          - linux
+          - ubuntu
           - windows
           - macos
-        default: linux
+        default: ubuntu
 
 jobs:
   build:
