@@ -35,5 +35,4 @@ jobs:
         with:
           name: native-app-${{ github.event.inputs.target_os }}
           path: |
-            target/*
-            build/native/nativeCompile/*
+            app/build/native/nativeCompile/*
