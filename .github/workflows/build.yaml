@@ -1,0 +1,34 @@
+name: Build the HelloOpenGL project
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_os:
+        description: "Select the OS to compile for"
+        required: true
+        type: choice
+        options:
+          - linux
+          - windows
+          - macos
+        default: linux
+
+jobs:
+  build:
+    runs-on: ${{ github.event.inputs.target_os }}-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: graalvm/setup-graalvm@v1
+        with:
+          version: "latest"
+          java-version: "21"
+          components: "native-image"
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-app-${{ github.event.inputs.target_os }}
+          path: |
+            target/*
+            build/native/nativeCompile/*

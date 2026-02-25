@@ -5,7 +5,17 @@ plugins {
 }
 
 def lwjglVersion = "3.3.4"
-def lwjglNatives = "natives-linux"
+
+def os = org.gradle.internal.os.OperatingSystem.current()
+def lwjglNatives = null
+
+if (os.isWindows()) {
+    lwjglNatives = "natives-windows"
+} else if (os.isMacOsX()) {
+    lwjglNatives = "natives-macos"
+} else if (os.isLinux()) {
+    lwjglNatives = "natives-linux"
+}
 
 repositories {
     mavenCentral()
