@@ -18,8 +18,11 @@ jobs:
     runs-on: ${{ github.event.inputs.target_os }}-latest
 
     steps:
-      - uses: actions/checkout@v4
-      - name: graalvm/setup-graalvm@v1
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Graalvm
+        uses: graalvm/setup-graalvm@v1
         with:
           version: "latest"
           java-version: "21"
