@@ -1,0 +1,72 @@
+plugins {
+    alias(libs.plugins.kotlin.jvm)
+    id("org.graalvm.buildtools.native") version "0.10.5"
+    id 'application'
+}
+
+def lwjglVersion = "3.3.4"
+def lwjglNatives = "natives-linux"
+
+repositories {
+    mavenCentral()
+    maven { url "https://central.sonatype.com/repository/maven-snapshots" }
+}
+
+
+dependencies {
+
+    implementation "org.lwjgl:lwjgl:${lwjglVersion}"
+    implementation "org.lwjgl:lwjgl:${lwjglVersion}:${lwjglNatives}"
+
+    implementation "org.lwjgl:lwjgl-glfw:${lwjglVersion}"
+    implementation "org.lwjgl:lwjgl-glfw:${lwjglVersion}:${lwjglNatives}"
+
+    implementation "org.lwjgl:lwjgl-opengl:${lwjglVersion}"
+    implementation "org.lwjgl:lwjgl-opengl:${lwjglVersion}:${lwjglNatives}"
+
+    implementation "org.lwjgl:lwjgl-openal:${lwjglVersion}"
+    implementation "org.lwjgl:lwjgl-openal:${lwjglVersion}:${lwjglNatives}"
+
+    implementation "org.lwjgl:lwjgl-stb:${lwjglVersion}"
+    implementation "org.lwjgl:lwjgl-stb:${lwjglVersion}:${lwjglNatives}"
+
+    implementation "org.lwjgl:lwjgl-assimp:${lwjglVersion}"
+    implementation "org.lwjgl:lwjgl-assimp:${lwjglVersion}:${lwjglNatives}"
+
+    implementation libs.guava
+
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+    testImplementation libs.junit.jupiter.engine
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(24)
+        vendor.set(JvmVendorSpec.matching("GraalVM"))
+    }
+}
+
+application {
+    mainClass = 'org.example.AppKt'
+}
+
+
+graalvmNative {
+    binaries {
+        main {
+            imageName = "HelloOpenGL"
+
+            buildArgs.add("-H:IncludeResources=.*\\.so")
+            buildArgs.add("--enable-native-access=ALL-UNNAMED")
+            buildArgs.add("--no-fallback")
+        }
+    }
+}
+
+
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
