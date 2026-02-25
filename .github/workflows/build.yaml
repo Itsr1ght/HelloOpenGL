@@ -27,6 +27,7 @@ jobs:
           version: "latest"
           java-version: "24"
           components: "native-image"
+      - name: Build the Native binary
         run: ./gradlew nativeCompile
 
       - name: Upload binary
