@@ -72,6 +72,7 @@ graalvmNative {
                 buildArgs.add("-H:IncludeResources=.*\\.so")
             }
             if (os.isWindows()){
+                buildArgs.add("--initialize-at-run-time=org.lwjgl")
                 buildArgs.add("-H:IncludeResources=.*\\.dll")
             }
             if (os.isMacOsX()){
