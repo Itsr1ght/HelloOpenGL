@@ -131,6 +131,7 @@ graalvmNative {
             buildArgs.add('--native-image-info')
             buildArgs.add('-march=compatibility') //only available in GraalVM for JDK 17+
             buildArgs.add("-H:IncludeResources=.*\\.(so|dll|dylib)")
+            buildArgs.add("--enable-native-access=ALL-UNNAMED")
             //buildArgs.add('-H:+TraceNativeToolUsage')
 
             useFatJar = false
