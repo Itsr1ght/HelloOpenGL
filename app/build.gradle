@@ -1,53 +1,59 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
-    id("org.graalvm.buildtools.native") version "0.10.5"
+    id("org.graalvm.buildtools.native") version "0.11.1"
+    id 'com.google.osdetector' version '1.7.3'
     id 'application'
 }
 
-def lwjglVersion = "3.3.4"
+group = 'org.example'
+description = 'LWJGL3 HelloWorld with native image by GraalVM'
+version = '0.0.1-SNAPSHOT'
 
-def os = org.gradle.internal.os.OperatingSystem.current()
-def lwjglNatives = null
+def getCurrentPlatform() {
+    def os = osdetector.os
+    def lwjglOS = os == 'linux' ? 'linux' :
+                  os == 'osx' ? 'macos' :
+                  os == 'windows' ? 'windows' :
+                  'unknown'
+    if (lwjglOS == 'unknown')
+        throw new GradleException('Unsupported OS: ' + os)
 
-if (os.isWindows()) {
-    lwjglNatives = "natives-windows"
-} else if (os.isMacOsX()) {
-    lwjglNatives = "natives-macos"
-} else if (os.isLinux()) {
-    lwjglNatives = "natives-linux"
+    def arch = osdetector.arch
+    //consider 64-bit architectures only
+    def lwjglArch = arch == 'x86_64' ? '' :
+                    arch == 'aarch_64' ? 'arm64' :
+                    'unknown'
+    if (lwjglArch == 'unknown')
+        throw new GradleException('Unsupported Architecture: ' + arch)
+
+    return (lwjglArch == '' ? lwjglOS : (lwjglOS + '-' + lwjglArch))
 }
+
+ext {
+    lwjglVersion = "3.3.6"
+    lwjglModules = ['lwjgl', 'lwjgl-assimp', 'lwjgl-glfw', 'lwjgl-openal', 'lwjgl-opengl', 'lwjgl-stb']
+    mainClassName = 'org.example.AppKt'
+    currentPlatform = getCurrentPlatform()
+}
+
 
 repositories {
     mavenCentral()
     maven { url "https://central.sonatype.com/repository/maven-snapshots" }
+    mavenLocal()
 }
 
 
 dependencies {
+    //get recommended dependency versions from the LWJGL BOM
+    implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
 
-    implementation "org.lwjgl:lwjgl:${lwjglVersion}"
-    implementation "org.lwjgl:lwjgl:${lwjglVersion}:${lwjglNatives}"
-
-    implementation "org.lwjgl:lwjgl-glfw:${lwjglVersion}"
-    implementation "org.lwjgl:lwjgl-glfw:${lwjglVersion}:${lwjglNatives}"
-
-    implementation "org.lwjgl:lwjgl-opengl:${lwjglVersion}"
-    implementation "org.lwjgl:lwjgl-opengl:${lwjglVersion}:${lwjglNatives}"
-
-    implementation "org.lwjgl:lwjgl-openal:${lwjglVersion}"
-    implementation "org.lwjgl:lwjgl-openal:${lwjglVersion}:${lwjglNatives}"
-
-    implementation "org.lwjgl:lwjgl-stb:${lwjglVersion}"
-    implementation "org.lwjgl:lwjgl-stb:${lwjglVersion}:${lwjglNatives}"
-
-    implementation "org.lwjgl:lwjgl-assimp:${lwjglVersion}"
-    implementation "org.lwjgl:lwjgl-assimp:${lwjglVersion}:${lwjglNatives}"
-
-    implementation libs.guava
-
-    testImplementation 'org.jetbrains.kotlin:kotlin-test'
-    testImplementation libs.junit.jupiter.engine
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    //add LWJGL modules and the current OS's natives to the compile and runtime classpaths
+    lwjglModules.each {
+        implementation "org.lwjgl:$it"
+        if (it != 'lwjgl-egl')  //lwjgl-egl has no native libraries
+            runtimeOnly "org.lwjgl:$it::natives-$currentPlatform"
+    }
 }
 
 
@@ -58,32 +64,82 @@ java {
     }
 }
 
+compileJava {
+    options.release = 24      
+    options.encoding = 'UTF-8'
+}
+
 application {
-    mainClass = 'org.example.AppKt'
+    mainClass = project.mainClassName
+    applicationName = project.name
+}
+
+run {
+    systemProperties = System.getProperties()
+}
+
+task extractLwjglManifest(type: Copy) {
+    from {
+        configurations.compileClasspath.filter { it.name == "lwjgl-${lwjglVersion}.jar" }
+                                       .collect { zipTree(it) }
+    }
+    include 'META-INF/MANIFEST.MF'
+    into "$buildDir/tmp"
+}
+
+
+task uberJar(type: Jar) {
+    dependsOn extractLwjglManifest
+    archiveClassifier = "no-deps-$currentPlatform"
+
+    with jar
+    manifest {
+        from (extractLwjglManifest.destinationDir.path + '/META-INF/MANIFEST.MF') {
+            eachEntry { details -> 
+                if (details.key == 'Created-By')
+                    details.value = System.getProperty('java.runtime.version') + ' (' + System.getProperty('java.vendor') + ')'
+                else if (details.key == 'Ant-Version')
+                    details.exclude()
+            }
+        }
+        attributes(
+            'Main-Class': project.mainClassName,
+            'Built-By': System.getProperty('user.name'),
+            'Gradle-Version': 'Gradle ' + gradle.getGradleVersion(),
+        )
+    }
+
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
+    duplicatesStrategy = 'exclude'
 }
 
 
 graalvmNative {
+    toolchainDetection = false
     binaries {
         main {
-            imageName = "HelloOpenGL"
+            imageName = project.name
+            mainClass = project.mainClassName
+            debug = true
+            verbose = true
+            fallback = false
 
-            if (os.isLinux()){
-                buildArgs.add("-H:IncludeResources=.*\\.so")
-            }
-            if (os.isWindows()){
-                buildArgs.add("--initialize-at-run-time=org.lwjgl")
-                buildArgs.add("-H:IncludeResources=.*\\.dll")
-            }
-            if (os.isMacOsX()){
-                buildArgs.add("-H:IncludeResources=.*\\.dylib")
-            }
-            buildArgs.add("--enable-native-access=ALL-UNNAMED")
-            buildArgs.add("--no-fallback")
+            buildArgs.add('--initialize-at-run-time=org.lwjgl')
+            buildArgs.add('--native-image-info')
+            buildArgs.add('-march=compatibility') //only available in GraalVM for JDK 17+
+            buildArgs.add("-H:IncludeResources=.*\\.(so|dll|dylib)")
+            //buildArgs.add('-H:+TraceNativeToolUsage')
+
+            useFatJar = false
         }
     }
+    metadataRepository {
+        enabled = false
+    }
 }
-
 
 
 tasks.named('test') {
