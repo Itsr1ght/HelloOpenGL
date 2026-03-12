@@ -91,7 +91,7 @@ tasks.register("prepareNatives", Copy) {
     into(layout.buildDirectory.dir("generated/natives"))
 
     eachFile {
-        path = name
+        path = "natives/${name}"
     }
 
     includeEmptyDirs = false
@@ -113,6 +113,9 @@ graalvmNative {
     binaries {
         main {
             runtimeArgs.add("--enable-native-access=ALL-UNNAMED")
+            resources {
+                includedPatterns.add("natives/.*")
+            }
         }
     }
 }
