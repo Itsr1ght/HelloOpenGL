@@ -117,6 +117,11 @@ graalvmNative {
             resources {
                 includedPatterns.add("natives/.*")
             }
+            if (osdetector.os == "windows") {
+                buildArgs.add("-H:NativeLinkerOption=/SUBSYSTEM:WINDOWS")
+                buildArgs.add("-H:NativeLinkerOption=/ENTRY:mainCRTStartup")
+                //buildArgs.add("-H:Icon=src/main/resources/icon.ico") // maybe in future
+            }
         }
     }
 }
