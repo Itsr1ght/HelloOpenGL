@@ -86,12 +86,12 @@ tasks.register("prepareNatives", Copy) {
         }.collect { zipTree(it) }
     })
 
-    include "**/*.so", "**/*.dll", "**/*.dylib"
+    include("**/*.so", "**/*.dll", "**/*.dylib")
 
-    into "$projectDir/src/main/resources/natives"
+    into(layout.buildDirectory.dir("generated/natives"))
 
     eachFile {
-        path = name   // flatten folder structure
+        path = name
     }
 
     includeEmptyDirs = false
@@ -99,6 +99,14 @@ tasks.register("prepareNatives", Copy) {
 
 tasks.named("processResources") {
     dependsOn("prepareNatives")
+}
+
+sourceSets {
+    main {
+        resources {
+            srcDir(layout.buildDirectory.dir("generated/natives"))
+        }
+    }
 }
 
 graalvmNative {
