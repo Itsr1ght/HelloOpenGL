@@ -78,67 +78,34 @@ run {
     systemProperties = System.getProperties()
 }
 
-task extractLwjglManifest(type: Copy) {
-    from {
-        configurations.compileClasspath.filter { it.name == "lwjgl-${lwjglVersion}.jar" }
-                                       .collect { zipTree(it) }
+tasks.register("prepareNatives", Copy) {
+
+    from({
+        configurations.runtimeClasspath.findAll {
+            it.name.contains("natives-${currentPlatform}")
+        }.collect { zipTree(it) }
+    })
+
+    include "**/*.so", "**/*.dll", "**/*.dylib"
+
+    into "$projectDir/src/main/resources/natives"
+
+    eachFile {
+        path = name   // flatten folder structure
     }
-    include 'META-INF/MANIFEST.MF'
-    into "$buildDir/tmp"
+
+    includeEmptyDirs = false
 }
 
-
-task uberJar(type: Jar) {
-    dependsOn extractLwjglManifest
-    archiveClassifier = "no-deps-$currentPlatform"
-
-    with jar
-    manifest {
-        from (extractLwjglManifest.destinationDir.path + '/META-INF/MANIFEST.MF') {
-            eachEntry { details -> 
-                if (details.key == 'Created-By')
-                    details.value = System.getProperty('java.runtime.version') + ' (' + System.getProperty('java.vendor') + ')'
-                else if (details.key == 'Ant-Version')
-                    details.exclude()
-            }
-        }
-        attributes(
-            'Main-Class': project.mainClassName,
-            'Built-By': System.getProperty('user.name'),
-            'Gradle-Version': 'Gradle ' + gradle.getGradleVersion(),
-        )
-    }
-
-    from {
-        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
-    }
-    exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
-    duplicatesStrategy = 'exclude'
+tasks.named("processResources") {
+    dependsOn("prepareNatives")
 }
-
 
 graalvmNative {
-    toolchainDetection = false
     binaries {
         main {
-            imageName = project.name
-            mainClass = project.mainClassName
-            debug = true
-            verbose = true
-            fallback = false
-
-            buildArgs.add('--initialize-at-run-time=org.lwjgl')
-            buildArgs.add('--native-image-info')
-            buildArgs.add('-march=compatibility') //only available in GraalVM for JDK 17+
-            buildArgs.add("-H:IncludeResources=.*\\.(so|dll|dylib)")
-            buildArgs.add("--enable-native-access=ALL-UNNAMED")
-            //buildArgs.add('-H:+TraceNativeToolUsage')
-
-            useFatJar = false
+            runtimeArgs.add("--enable-native-access=ALL-UNNAMED")
         }
-    }
-    metadataRepository {
-        enabled = false
     }
 }
 

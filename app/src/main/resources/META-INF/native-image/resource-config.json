@@ -1,0 +1,9 @@
+{
+  "resources": {
+    "includes": [
+        { "pattern": "natives/.*\\.so" },
+        { "pattern": "natives/.*\\.dll" },
+        { "pattern": "natives/.*\\.dylib" }
+    ]
+  }
+}

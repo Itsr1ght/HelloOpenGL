@@ -1,11 +1,43 @@
 package org.example
 
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+
 import org.lwjgl.glfw.GLFW.*;
 import org.lwjgl.opengl.*;
 import org.lwjgl.opengl.GL11.*;
 
+fun nativeLib(name: String): String {
+    val os = System.getProperty("os.name").lowercase()
+
+    return when {
+        os.contains("win") -> "$name.dll"
+        os.contains("mac") -> "lib$name.dylib"
+        else -> "lib$name.so"
+    }
+}
+
+fun extractNative(name: String, dir: java.nio.file.Path) {
+    val fileName = nativeLib(name)
+    val stream = object {}.javaClass.getResourceAsStream("/natives/$fileName")
+        ?: error("Missing native resource: $name")
+
+    val target = dir.resolve(fileName)
+
+    stream.use {
+        Files.copy(it, target, StandardCopyOption.REPLACE_EXISTING)
+    }
+}
+
 
 fun main(){
+    val tempDir = Files.createTempDirectory("lwjgl-natives")
+
+    extractNative("lwjgl", tempDir)
+    extractNative("glfw", tempDir)
+    extractNative("lwjgl_opengl", tempDir)
+
+    System.setProperty("org.lwjgl.librarypath", tempDir.toString())
 
     if (!glfwInit()) throw IllegalStateException("Unable to initialize GLFW");
 
