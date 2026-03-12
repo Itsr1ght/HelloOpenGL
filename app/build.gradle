@@ -99,6 +99,7 @@ tasks.register("prepareNatives", Copy) {
 
 tasks.named("processResources") {
     dependsOn("prepareNatives")
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 sourceSets {
